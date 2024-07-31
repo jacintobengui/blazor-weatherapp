@@ -1,0 +1,135 @@
+﻿@page "/"
+@using WeatherApp.Models
+@inject HttpClient httpClient
+
+<PageTitle>App de Clima</PageTitle>
+
+<div id="container">
+
+    <form id="search" @onsubmit="Buscar">
+        <i class="fa-solid fa-location-dot"></i>
+        <input type="search" id="city_name" placeholder="Buscar cidade" @bind-value="cityName" />
+        <button type="submit">
+            <i class="fa-solid fa-magnifying-glass"></i>
+        </button>
+    </form>
+
+    <div id="weather" class="@show">
+        <h1 id="title">@weather.Title</h1>
+
+        <div id="infos">
+            <div id="temp">
+                <img id="temp_img" src="@weather.ImgUrl" alt="temp_icon" />
+
+                <div>
+                    <p id="temp_value">
+                        @weather.TempValue <sup>ºC</sup>
+                    </p>
+                    <p id="temp_description">
+                        @weather.TempDescription
+                    </p>
+                </div>
+            </div>
+
+            <div id="other_infos">
+                <div class="info">
+                    <i id="temp_max_icon" class="fa-solid fa-temperature-high"></i>
+
+                    <div>
+                        <h2>Temp. max</h2>
+                        <p class="temp_max">@weather.TempMax <sup>ºC</sup></p>
+                    </div>
+                </div>
+
+                <div class="info">
+                    <i id="temp_min_icon" class="fa-solid fa-temperature-low"></i>
+
+                    <div>
+                        <h2>Temp. min</h2>
+                        <p class="temp_min">@weather.TempMin <sup>ºC</sup></p>
+                    </div>
+                </div>
+
+                <div class="info">
+                    <i id="humidity_icon" class="fa-solid fa-droplet"></i>
+
+                    <div>
+                        <h2>Humidade</h2>
+                        <p class="humidity">@weather.Humidity%</p>
+                    </div>
+                </div>
+
+                <div class="info">
+                    <i id="wind_icon" class="fa-solid fa-wind"></i>
+
+                    <div>
+                        <h2>Vento</h2>
+                        <p class="wind">@weather.Wind km/h</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="alert">
+        <img class="@display" src="img/not_found.svg"/>
+        @alert
+    </div>
+</div>
+
+@code {
+    string cityName = "";
+    string alert = "";
+    string show = "";
+    string display = "";
+
+    WeatherInfoDto weather = new();
+
+    protected async Task Buscar()
+    {
+        if (!string.IsNullOrEmpty(cityName))
+        {
+            string City_Name = Uri.EscapeDataString(cityName);
+            string API_key = "e101a9efd98ab3526e0cc8f49670f90a";
+            string apiUrl = $"https://api.openweathermap.org/data/2.5/weather?q={City_Name}&appid={API_key}&units=metric&lang=pt_br";
+
+            var response = await httpClient.GetAsync(apiUrl);
+
+            if (response.IsSuccessStatusCode)
+            {
+                WeatherInfo? info = await response.Content.ReadFromJsonAsync<WeatherInfo>();
+
+                PreecherInfo(info!);
+
+                alert = "";
+                display = "";
+                show = "show";
+            }
+            else
+            {
+                show = "";
+                display = "block";
+                alert = "Não foi possível localizar...";
+            }
+        }
+        else
+        {
+            show = "";
+            display = "";
+            alert = "Você precisa digitar uma cidade...";
+        }
+    }
+
+    private  void PreecherInfo(WeatherInfo info)
+    {
+        weather.Title = $"{info.Name}, {info.Sys.Country}";
+        weather.TempValue = info.Main.Temp.ToString("F1");
+        weather.TempDescription = info.Weather[0].Description;
+        weather.TempMin = info.Main.temp_min.ToString("F1");
+        weather.TempMax = info.Main.temp_max.ToString("F1");
+        weather.Humidity = info.Main.Humidity.ToString();
+        weather.Wind = info.Wind.Speed.ToString("F1");
+        weather.ImgUrl = $"https://openweathermap.org/img/wn/{info.Weather[0].Icon}@2x.png";
+    }
+}
+
